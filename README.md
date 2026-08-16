@@ -109,8 +109,4 @@ $$\hat{y} = \frac{(0.2500 \times 1200) + (0.1111 \times 1250) + (0.0204 \times 1
 
 ---
 
-## 👨‍🏫 อ้างอิง & ผู้จัดทำ (Credits)
 
-- **เนื้อหา:** Machine Learning Lecture Notes[cite: 1]
-- **ผู้สอน/ผู้จัดทำ:** Dr. Olarik Surinta[cite: 1]
-- **วัตถุประสงค์:** เอกสารและสื่อการเรียนรู้สรุปทฤษฎีวิชา Machine Learning เพื่อการศึกษา[cite: 1]
