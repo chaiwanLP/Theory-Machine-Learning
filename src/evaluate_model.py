@@ -1,9 +1,12 @@
 import os
 
 import joblib
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import (
+    ConfusionMatrixDisplay,
     accuracy_score,
     confusion_matrix,
     f1_score,
@@ -14,10 +17,16 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "..", "dataset")
 CLEANED_PATH = os.path.join(DATASET_DIR, "cleaned_dataset.csv")
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "subject_classifier.joblib")
-
+MODEL_PATH = r"D:\Learn\Theory-Machine-Learning\Scopus\subject_classifier.joblib"
 RANDOM_STATE = 42
 TOP_N_CONFUSION_PAIRS = 10
+
+# ที่เก็บรูป confusion matrix ที่ export ออกมา
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
+CONFUSION_MATRIX_PNG = os.path.join(OUTPUT_DIR, "confusion_matrix.png")
+CONFUSION_MATRIX_NORMALIZED_PNG = os.path.join(
+    OUTPUT_DIR, "confusion_matrix_normalized.png"
+)
 
 
 def build_text_column(df: pd.DataFrame) -> pd.Series:
@@ -48,6 +57,52 @@ def top_confusion_pairs(cm: pd.DataFrame, top_n: int) -> pd.DataFrame:
                 rows.append((true_label, pred_label, count))
     pairs = pd.DataFrame(rows, columns=["true_subject", "predicted_as", "count"])
     return pairs.sort_values("count", ascending=False).head(top_n).reset_index(drop=True)
+
+
+def plot_confusion_matrix(
+    cm_df: pd.DataFrame,
+    normalize: bool,
+    save_path: str,
+) -> None:
+    """วาด confusion matrix เป็น heatmap แล้วเซฟเป็นไฟล์รูปภาพ
+
+    normalize=True จะ normalize ตามแถว (true label) เป็นสัดส่วน 0-1
+    เพื่อให้เทียบกันได้ง่ายแม้จำนวนตัวอย่างในแต่ละ subject ไม่เท่ากัน
+    """
+    data = cm_df.copy()
+    fmt = "d"
+    title = "Confusion Matrix"
+
+    if normalize:
+        data = data.div(data.sum(axis=1), axis=0).fillna(0)
+        fmt = ".2f"
+        title = "Confusion Matrix"
+
+    n_labels = len(cm_df)
+    fig_size = max(8, n_labels * 0.6)
+
+    plt.figure(figsize=(fig_size, fig_size * 0.85))
+    sns.heatmap(
+        data,
+        annot=True,
+        fmt=fmt,
+        cmap="Blues",
+        cbar=True,
+        square=True,
+        linewidths=0.5,
+        linecolor="white",
+    )
+    plt.title(title)
+    plt.xlabel("Predicted subject")
+    plt.ylabel("True subject")
+    plt.xticks(rotation=45, ha="right")
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+    print(f"บันทึก confusion matrix ไปที่: {save_path}")
 
 
 def main() -> None:
@@ -136,6 +191,12 @@ def main() -> None:
         print(
             "\n-> ข้อผิดพลาดกระจุกอยู่ที่ subject จำนวนน้อยคู่ อาจพิจารณารวม/ปรับนิยาม subject เหล่านั้น"
         )
+
+    print("\n=== 6. Confusion matrix (heatmap) ===")
+    plot_confusion_matrix(cm_df, normalize=False, save_path=CONFUSION_MATRIX_PNG)
+    plot_confusion_matrix(
+        cm_df, normalize=True, save_path=CONFUSION_MATRIX_NORMALIZED_PNG
+    )
 
 
 if __name__ == "__main__":
