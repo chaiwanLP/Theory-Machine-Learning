@@ -290,18 +290,17 @@
       from what the classifier itself encodes: vocabulary, IDF, and per-class decision coefficients.
     </p>
     <div class="note-box">
-      <b>What changed from the original.</b> There's no publication year, so the trend heatmap becomes a
-      <b>keyword × class weight heatmap</b>. There's no document overlap to compute evolution, so that panel
-      becomes a <b>class similarity diagram</b> based on shared top vocabulary. The co‑occurrence network becomes
-      a <b>term–class association network</b> — edges are decision‑boundary weights, not shared documents. And
-      with no publication growth to track, the quadrant plots <b>class‑loading vs. exclusivity</b> instead of
-      recency vs. frequency.
+      <b>วิธีการที่ใช้จริงในโปรเจกต์นี้.</b> ทุกภาพด้านล่างสร้างจากการ introspect โมเดล
+      <code>subject_classifier.joblib</code> ตัวเดียวกันที่ใช้จำแนกบทความ Scopus จริง (36,069 บทความ 10 สาขา):
+      <code>TfidfVectorizer</code> (max_features=50,000, ngram 1–2, min_df=2, sublinear_tf) ต่อด้วย
+      <code>LinearSVC</code> (one‑vs‑rest, C=1.0) ค่าตัวเลขทั้งหมดคือ <b>coefficient ของ LinearSVC</b> และ
+      <b>IDF ของ TF‑IDF</b> ที่ดึงออกมาตรงจากไฟล์โมเดล ไม่ได้คำนวณจากเอกสารดิบใหม่
     </div>
     <nav class="toc">
-      <a href="#heatmap">1. Weight Heatmap</a>
-      <a href="#similarity">2. Class Similarity</a>
-      <a href="#network">3. Term–Class Network</a>
-      <a href="#quadrant">4. Specificity Quadrant</a>
+      <a href="#heatmap">1. Keyword × Class Weight Heatmap</a>
+      <a href="#similarity">2. Class Similarity Arc Diagram</a>
+      <a href="#network">3. Term–Class Association Network</a>
+      <a href="#quadrant">4. Specificity Quadrant Plot</a>
     </nav>
   </header>
 
@@ -311,10 +310,11 @@
       <span class="count" id="heatCount"></span>
     </div>
     <p class="section-intro">
-      The 32 terms with the strongest pull in <em>any</em> direction, grouped and sorted by the class each one
-      pushes hardest toward — the small colour tag on the left of each row and the swatch above each column
-      both use the same class colour, so you can trace a term straight to its class. Warm cells push
-      <em>toward</em> a class, cool cells push <em>away</em>; the strongest cells are labelled with their value.
+      ตารางแสดงน้ำหนักคำศัพท์ 32 คำเทียบกับ 10 สาขา จัดกลุ่มและเรียงตามสาขาที่คำนั้นผลักดันมากที่สุด
+      แถบสีซ้ายของแต่ละแถวและสวอตช์เหนือแต่ละคอลัมน์ใช้สีสาขาเดียวกัน เพื่อให้ตามรอยคำไปยังสาขาได้ง่าย
+      <b>สีส้ม (โทนร้อน)</b> คือค่าน้ำหนักเป็นบวก ยิ่งสูงยิ่งผลักดันให้โมเดลทายว่าเป็นสาขานั้นทันที
+      <b>สีเขียว (โทนเย็น)</b> คือค่าน้ำหนักเป็นลบ ยิ่งติดลบมากยิ่งลดโอกาสที่จะเป็นสาขานั้น
+      เซลล์ที่มีค่าน้ำหนักสูงสุดจะแสดงตัวเลขกำกับไว้
     </p>
     <div class="viz-frame">
       <div id="heatmapChart"></div>
@@ -323,14 +323,13 @@
 
   <section class="panel" id="similarity">
     <div class="section-head">
-      <h2><span class="num">02</span> Class Similarity</h2>
+      <h2><span class="num">02</span> Class Similarity Arc Diagram</h2>
       <span class="count" id="simCount"></span>
     </div>
     <p class="section-intro">
-      Arc thickness is the Jaccard overlap between each pair of classes' top‑40 defining terms — how much
-      vocabulary two subject areas share. Thin, sparse arcs across the board mean the ten classes are, by
-      the model's own reckoning, fairly cleanly separated; the thickest arcs are the pairs most likely to
-      get confused for one another.
+      แผนภูมิเส้นโค้งแสดงความคล้ายกันระหว่างสาขา วัดจาก Jaccard overlap ของคำเด่นอันดับต้น ๆ 40 คำ ของแต่ละสาขา
+      <b>เส้นยิ่งหนา</b> คือทั้งสองสาขาวิชามีคำศัพท์เด่นที่ใช้เหมือนกันซ้ำกันหลายคำ ทำให้โมเดลมีโอกาสจำแนกสับสน
+      ระหว่างสองสาขานั้นได้ง่ายขึ้น <b>เส้นบางหรือไม่มีเส้น</b> คือสาขานั้นใช้คำศัพท์เฉพาะตัวชัดเจน ไม่ค่อยไปซ้ำกับสาขาอื่น
     </p>
     <div class="viz-frame">
       <div id="arcChart"></div>
@@ -343,9 +342,10 @@
       <span class="count" id="netCount"></span>
     </div>
     <p class="section-intro">
-      Ten class hubs (large, labelled) surrounded by the terms that drive them. Node size is the term's
-      decision weight in its strongest class; an edge exists wherever a term's weight for a class clears the
-      threshold below. Drag nodes, scroll or use the buttons to zoom, and click any node for its full profile.
+      กราฟเครือข่ายโยงใยคำศัพท์เข้าหา 10 สาขาวิชา <b>วงกลมใหญ่ (10 วง)</b> แทน 10 สาขาวิชา
+      (เปรียบเหมือนดวงอาทิตย์) <b>วงกลมเล็ก</b> แทนคำศัพท์เด่นแต่ละคำ (เปรียบเหมือนดาวบริวาร) ขนาดของวงกลมเล็ก
+      ตามน้ำหนักของคำในสาขาที่แข็งแรงที่สุด <b>เส้นลากเชื่อม</b> แสดงว่าคำนั้นอยู่ในสาขานั้น โดยจะเชื่อมก็ต่อเมื่อ
+      น้ำหนักของคำต่อสาขานั้นเกินค่า threshold ด้านล่าง ลากวงกลม เลื่อนซูม หรือคลิกวงกลมเพื่อดูรายละเอียดเต็ม
     </p>
     <div class="network-controls">
       <label>Min association weight: <span id="threshVal">1.5</span>
@@ -370,14 +370,15 @@
 
   <section class="panel" id="quadrant">
     <div class="section-head">
-      <h2><span class="num">04</span> Specificity Quadrant</h2>
+      <h2><span class="num">04</span> Specificity Quadrant Plot</h2>
       <span class="count" id="quadCount"></span>
     </div>
     <p class="section-intro">
-      Each bubble is one of the 88 class‑defining terms. The x‑axis is how hard a term pushes toward its
-      strongest class; the y‑axis is how much further ahead that class is than the term's second‑best class
-      — its exclusivity. Bubble size is inverse document frequency, so rarer, more specialised terms read
-      larger. Top‑right terms are the model's cleanest, most trustworthy signals.
+      กราฟจัดคำศัพท์เด่น 88 คำ <b>แกน X</b> คือแรงผลักดันของคำต่อสาขา (น้ำหนัก LinearSVC ในสาขาที่แข็งแรงที่สุด)
+      ยิ่งอยู่ทางขวายิ่งเป็นสัญญาณที่ชัดว่าโมเดลจะทายเป็นสาขานั้น เช่น คำว่า software ทายเป็นสาขาซอฟต์แวร์ทันที
+      <b>แกน Y</b> คือความเฉพาะสาย (ส่วนต่างของน้ำหนักจากสาขาอันดับ 2) ยิ่งอยู่สูงยิ่งเป็นคำเฉพาะทางที่ไม่ปะปนกับ
+      สาขาอื่นเลย <b>ขนาดวงกลม</b> มาจากค่า IDF วงกลมยิ่งใหญ่แปลว่าเป็นคำเฉพาะทางที่หายาก
+      มุมขวาบนสุด (<b>STRONG &amp; EXCLUSIVE</b>) คือกลุ่มคำศัพท์ที่ช่วยให้โมเดลทำนายสาขาได้อย่างแม่นยำที่สุด
     </p>
     <div class="viz-frame">
       <div id="quadrantChart"></div>
@@ -796,7 +797,7 @@ let netSimulation, netSvg, netG, netZoom;
   g.append('line').attr('class','quad-line').attr('x1',0).attr('x2',innerW).attr('y1',y(d3.mean([0,d3.max(data,d=>d.exclusivity)]))).attr('y2',y(d3.mean([0,d3.max(data,d=>d.exclusivity)])));
   g.append('line').attr('class','quad-line').attr('y1',0).attr('y2',innerH).attr('x1',x(d3.mean([0,d3.max(data,d=>d.weight)]))).attr('x2',x(d3.mean([0,d3.max(data,d=>d.weight)])));
 
-  g.append('text').attr('class','quad-label').attr('x', innerW-4).attr('y', 14).attr('text-anchor','end').text('strong & exclusive →');
+  g.append('text').attr('class','quad-label').attr('x', innerW-4).attr('y', 14).attr('text-anchor','end').text('STRONG & EXCLUSIVE →');
   g.append('text').attr('class','quad-label').attr('x', 4).attr('y', innerH-6).text('← weak & shared');
 
   g.append('g').attr('transform',`translate(0,${innerH})`).call(d3.axisBottom(x).ticks(6))
@@ -806,8 +807,8 @@ let netSimulation, netSvg, netG, netZoom;
     .call(sel => sel.selectAll('text').attr('fill','var(--muted-on-dark)').attr('font-family','IBM Plex Mono'))
     .call(sel => sel.selectAll('line,path').attr('stroke','#C7BC9C'));
 
-  g.append('text').attr('class','axis-label').attr('x', innerW/2).attr('y', innerH+42).attr('text-anchor','middle').style('fill','var(--faint-on-dark)').text('Class loading (weight in top class) →');
-  g.append('text').attr('class','axis-label').attr('transform',`translate(-42,${innerH/2}) rotate(-90)`).attr('text-anchor','middle').style('fill','var(--faint-on-dark)').text('Exclusivity (margin over 2nd class) →');
+  g.append('text').attr('class','axis-label').attr('x', innerW/2).attr('y', innerH+42).attr('text-anchor','middle').style('fill','var(--faint-on-dark)').text('แรงผลักดันของคำต่อสาขา (weight) →');
+  g.append('text').attr('class','axis-label').attr('transform',`translate(-42,${innerH/2}) rotate(-90)`).attr('text-anchor','middle').style('fill','var(--faint-on-dark)').text('ความเฉพาะสาย (exclusivity) →');
 
   g.selectAll('.quad-dot').data(data).enter().append('circle')
     .attr('class','quad-dot')
